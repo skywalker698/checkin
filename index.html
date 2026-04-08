@@ -1,10 +1,200 @@
 <!DOCTYPE html>
-<html>
-   <head>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-      <base target="_top">
-   </head>
-   <body>
-      <iframe style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;border: 0;"src="https://script.google.com/macros/s/AKfycbyn-YtfHZSwlUhoFchslu0V3VYOQFsL50LSZ63icW555HEuWHmhTXyIm_Gv20lhv3tr/exec"></iframe>
-   </body>
+<title>ScanCheckIn/Out-HR Services</title>
+
+<style>
+body, html {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: #f0f0f0;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+/* Loader */
+#loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  z-index: 999;
+  transition: opacity 0.8s ease;
+}
+
+#loader.fadeout {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Loader bar */
+.bar-loader {
+  width: 120px;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bar-inner {
+  width: 40px;
+  height: 100%;
+  background: #2563eb;
+  animation: move 1.4s infinite linear;
+}
+
+@keyframes move {
+  0% {transform: translateX(-40px);}
+  100% {transform: translateX(120px);}
+}
+
+/* GPS Button */
+#gpsBtn {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg,#2563eb,#22d3ee);
+  color: #fff;
+  border: none;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+}
+
+/* iframe */
+#content-iframe {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+
+#content-iframe.visible {
+  opacity: 1;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="bar-loader">
+    <div class="bar-inner"></div>
+  </div>
+</div>
+
+<!-- ปุ่มเปิด GPS -->
+<button id="gpsBtn">📍 เปิดตำแหน่งเพื่อเข้างาน</button>
+
+<!-- WebApp -->
+<iframe id="content-iframe"
+  allow="geolocation *"
+  src="https://script.google.com/macros/s/AKfycbyn-YtfHZSwlUhoFchslu0V3VYOQFsL50LSZ63icW555HEuWHmhTXyIm_Gv20lhv3tr/exec">
+</iframe>
+
+<script>
+const iframe = document.getElementById('content-iframe');
+const loader = document.getElementById('loader');
+const gpsBtn = document.getElementById('gpsBtn');
+
+let sent = false;
+
+/* =========================
+   🚀 ขอ GPS แล้วส่งเข้า iframe
+========================= */
+function sendGPS(){
+
+  if(sent) return;
+
+  if (!navigator.geolocation) {
+    alert('อุปกรณ์ไม่รองรับ GPS');
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+
+      if(pos.coords.accuracy > 50){
+        alert('ตำแหน่งไม่แม่นยำ กรุณาเปิด GPS ให้แม่นขึ้น');
+        return;
+      }
+
+      const data = {
+        type: "GPS_DATA",
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        timestamp: new Date().toISOString()
+      };
+
+      /* ส่งเข้า iframe */
+      iframe.contentWindow.postMessage(
+        data,
+        "https://script.google.com"
+      );
+
+      console.log("📡 ส่ง GPS:", data);
+
+      sent = true;
+
+      /* แสดง iframe */
+      loader.classList.add('fadeout');
+      setTimeout(() => {
+        loader.style.display = 'none';
+        iframe.classList.add('visible');
+        gpsBtn.style.display = 'none';
+      }, 600);
+
+    },
+    (err) => {
+      alert('กรุณาอนุญาตตำแหน่ง');
+      console.error(err);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000
+    }
+  );
+}
+
+/* =========================
+   👆 ต้องกดก่อน (สำคัญ)
+========================= */
+gpsBtn.addEventListener('click', sendGPS);
+
+/* =========================
+   🔒 กันย้อนกลับ
+========================= */
+history.pushState(null, null, location.href);
+
+window.addEventListener('popstate', function () {
+  const confirmExit = confirm('ต้องการออกจากหน้านี้หรือไม่ ?');
+  if (!confirmExit) {
+    history.pushState(null, null, location.href);
+  }
+});
+
+/* =========================
+   🔒 กัน reload
+========================= */
+window.addEventListener('beforeunload', function (e) {
+  e.preventDefault();
+  e.returnValue = '';
+});
+</script>
+
+</body>
 </html>
