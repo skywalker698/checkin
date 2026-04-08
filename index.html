@@ -1,11 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ระบบสะแกนเข้า/ออกงาน Online</title>
+<title>ScanCheck IN/OUT-Tis</title>
 <style>
   body, html {
     margin: 0;
@@ -77,15 +75,43 @@
         src="https://script.google.com/macros/s/AKfycbyn-YtfHZSwlUhoFchslu0V3VYOQFsL50LSZ63icW555HEuWHmhTXyIm_Gv20lhv3tr/exec">
 </iframe>
 <script>
-  const loader = document.getElementById('loader');
+const loader = document.getElementById('loader');
   const iframe = document.getElementById('content-iframe');
+
   setTimeout(() => {
     loader.classList.add('fadeout');
     setTimeout(() => {
       loader.style.display = 'none';
       iframe.classList.add('visible');
-    }, 1000); // fadeout
-  }, 1500); // delay โหลด
+    }, 1000);
+  }, 1500);
+
+  // ==============================
+  // 🔒 ป้องกันปุ่มย้อนกลับ (Mobile Back)
+  // ==============================
+
+  // push state ครั้งแรก
+  history.pushState(null, null, location.href);
+
+  window.addEventListener('popstate', function (event) {
+    const confirmExit = confirm('ต้องการออกจากหน้านี้หรือไม่ ?');
+
+    if (confirmExit) {
+      // อนุญาตให้ย้อนกลับจริง
+      history.back();
+    } else {
+      // กันไม่ให้ย้อนกลับ
+      history.pushState(null, null, location.href);
+    }
+  });
+
+  // ==============================
+  // 🔒 กัน reload / ปิด tab (เสริม)
+  // ==============================
+  window.addEventListener('beforeunload', function (e) {
+    e.preventDefault();
+    e.returnValue = '';
+  });
 </script>
 </body>
 </html>
