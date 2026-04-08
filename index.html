@@ -56,18 +56,18 @@ body, html {
 /* GPS Button */
 #gpsBtn {
   position: fixed;
-  bottom: 24px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background: linear-gradient(135deg,#2563eb,#22d3ee);
   color: #fff;
   border: none;
-  padding: 14px 20px;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 16px 24px;
+  border-radius: 14px;
+  font-size: 16px;
   cursor: pointer;
   z-index: 1000;
-  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+  box-shadow: 0 10px 25px rgba(0,0,0,.25);
 }
 
 /* iframe */
@@ -109,9 +109,8 @@ body, html {
 const iframe = document.getElementById('content-iframe');
 const loader = document.getElementById('loader');
 const gpsBtn = document.getElementById('gpsBtn');
-
 let sent = false;
-
+const GPS_KEY = "gps_permission_granted";
 /* =========================
    🚀 ขอ GPS แล้วส่งเข้า iframe
 ========================= */
@@ -140,7 +139,6 @@ function sendGPS(){
         timestamp: new Date().toISOString()
       };
 
-      /* ส่งเข้า iframe */
       iframe.contentWindow.postMessage(
         data,
         "https://script.google.com"
@@ -150,13 +148,10 @@ function sendGPS(){
 
       sent = true;
 
-      /* แสดง iframe */
-      loader.classList.add('fadeout');
-      setTimeout(() => {
-        loader.style.display = 'none';
-        iframe.classList.add('visible');
-        gpsBtn.style.display = 'none';
-      }, 600);
+      /* ✅ จำว่าเคยอนุญาตแล้ว */
+      localStorage.setItem(GPS_KEY, "true");
+
+      showApp();
 
     },
     (err) => {
