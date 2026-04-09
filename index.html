@@ -2,260 +2,146 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ScanCheckIn/Out-HR Services</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HR Check-In System</title>
 
 <style>
-body, html {
-  margin: 0;
-  height: 100%;
-  width: 100%;
-  background: #f0f0f0;
-  font-family: sans-serif;
-  overflow: hidden;
+html, body {
+  margin:0;
+  padding:0;
+  height:100%;
+  background:#0b0f14;
+  overflow:hidden;
+  font-family:sans-serif;
 }
 
-/* Loader */
-#loader {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  z-index: 999;
-  transition: opacity 0.6s ease;
-}
-#loader.fadeout {
-  opacity: 0;
-  pointer-events: none;
+/* Container */
+.app-container{
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  background:#0b0f14;
 }
 
-/* Loader bar */
-.bar-loader {
-  width: 120px;
-  height: 12px;
-  background: #e5e7eb;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.bar-inner {
-  width: 40px;
-  height: 100%;
-  background: #2563eb;
-  animation: move 1.2s infinite linear;
-}
-@keyframes move {
-  0% {transform: translateX(-40px);}
-  100% {transform: translateX(120px);}
-}
-
-/* GPS Button */
-#gpsBtn {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(135deg,#2563eb,#22d3ee);
-  color: #fff;
-  border: none;
-  padding: 16px 24px;
-  border-radius: 14px;
-  font-size: 16px;
-  cursor: pointer;
-  z-index: 1000;
-  box-shadow: 0 10px 25px rgba(0,0,0,.25);
+/* 👇 เทคนิค "ตัดแถบขาว" */
+.iframe-wrap{
+  position:absolute;
+  top:-48px;        /* 👈 ดันขึ้นเพื่อตัด header */
+  left:0;
+  width:100%;
+  height:calc(100% + 48px);
+  overflow:hidden;
 }
 
 /* iframe */
-#content-iframe {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
-  opacity: 0;
-  transition: opacity .4s ease;
+iframe{
+  width:100%;
+  height:100%;
+  border:none;
+  background:#fff;
 }
-#content-iframe.visible {
-  opacity: 1;
+
+/* Loader */
+.loader{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#0b0f14;
+  z-index:10;
+  transition:.5s;
+}
+
+.loader.hide{
+  opacity:0;
+  pointer-events:none;
+}
+
+/* loading bar */
+.bar{
+  width:120px;
+  height:10px;
+  background:#1f2937;
+  border-radius:10px;
+  overflow:hidden;
+}
+.bar::after{
+  content:'';
+  display:block;
+  width:40px;
+  height:100%;
+  background:#22d3ee;
+  animation:move 1.2s infinite linear;
+}
+@keyframes move{
+  0%{transform:translateX(-40px)}
+  100%{transform:translateX(120px)}
+}
+
+/* Mobile safe area */
+@supports(padding:max(0px)){
+  .app-container{
+    padding-top: env(safe-area-inset-top);
+  }
 }
 </style>
 </head>
 
 <body>
 
-<!-- Loader -->
-<div id="loader">
-  <div class="bar-loader">
-    <div class="bar-inner"></div>
+<div class="app-container">
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="bar"></div>
   </div>
+
+  <!-- iframe -->
+  <div class="iframe-wrap">
+    <iframe id="appFrame"
+      allow="geolocation *; camera *; microphone *"
+      src="https://script.google.com/macros/s/AKfycbyn-YtfHZSwlUhoFchslu0V3VYOQFsL50LSZ63icW555HEuWHmhTXyIm_Gv20lhv3tr/exec">
+    </iframe>
+  </div>
+
 </div>
 
-<!-- ปุ่ม GPS -->
-<button id="gpsBtn">📍 เปิดตำแหน่งเพื่อเข้างาน</button>
-
-<!-- WebApp -->
-<iframe id="content-iframe"
-  allow="geolocation *"
-  src="https://script.google.com/macros/s/AKfycbyn-YtfHZSwlUhoFchslu0V3VYOQFsL50LSZ63icW555HEuWHmhTXyIm_Gv20lhv3tr/exec">
-</iframe>
-
 <script>
-const iframe = document.getElementById('content-iframe');
+const frame = document.getElementById('appFrame');
 const loader = document.getElementById('loader');
-const gpsBtn = document.getElementById('gpsBtn');
-
-const GPS_KEY = "gps_permission_granted";
-let sent = false;
 
 /* =========================
-   🎯 แสดง App
+   Loader control
 ========================= */
-function showApp(){
-  loader.classList.add('fadeout');
-  setTimeout(() => {
-    loader.style.display = 'none';
-    iframe.classList.add('visible');
-    gpsBtn.style.display = 'none';
-  }, 500);
-}
+frame.onload = () => {
+  setTimeout(()=>{
+    loader.classList.add('hide');
+  }, 600);
+};
 
 /* =========================
-   📡 ส่ง GPS
+   🔒 กัน back (mobile)
 ========================= */
-function sendGPS(){
+history.pushState(null,null,location.href);
 
-  if(sent) return;
-
-  if (!navigator.geolocation) {
-    alert('❌ อุปกรณ์ไม่รองรับ GPS');
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-
-    (pos) => {
-
-      if(pos.coords.accuracy > 50){
-        alert('⚠️ GPS ไม่แม่นยำ กรุณาเปิดโหมดความแม่นยำสูง');
-        return;
-      }
-
-      const data = {
-        type: "GPS_DATA",
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-        timestamp: new Date().toISOString()
-      };
-
-      iframe.contentWindow.postMessage(
-        data,
-        "https://script.google.com"
-      );
-
-      console.log("📡 ส่ง GPS:", data);
-
-      sent = true;
-
-      /* จำว่าเคยอนุญาตแล้ว */
-      localStorage.setItem(GPS_KEY, "true");
-
-      showApp();
-    },
-
-    (err) => {
-
-      console.warn("GPS ERROR:", err);
-
-      if(err.code === 1){
-        alert('❌ คุณปฏิเสธการใช้ GPS\nกรุณาเปิดสิทธิ์ Location ใน Browser');
-      } else {
-        alert('❌ ไม่สามารถดึงตำแหน่งได้');
-      }
-
-      /* แสดงปุ่มให้ retry */
-      loader.style.display = 'none';
-      gpsBtn.style.display = 'block';
-    },
-
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
-  );
-}
-
-/* =========================
-   🔍 ตรวจ Permission (Pro)
-========================= */
-async function checkPermission(){
-
-  if(!navigator.permissions){
-    return "unknown"; // Safari fallback
-  }
-
-  try {
-    const result = await navigator.permissions.query({ name: 'geolocation' });
-    return result.state; // granted | prompt | denied
-  } catch {
-    return "unknown";
-  }
-}
-
-/* =========================
-   🚀 INIT
-========================= */
-window.addEventListener('load', async () => {
-
-  const saved = localStorage.getItem(GPS_KEY);
-  const permission = await checkPermission();
-
-  console.log("Permission:", permission);
-
-  if(saved === "true" && (permission === "granted" || permission === "unknown")){
-    /* เคยอนุญาต → ยิงอัตโนมัติ */
-    sendGPS();
-
-  } else if(permission === "denied"){
-    /* โดน block */
-    loader.style.display = 'none';
-    gpsBtn.style.display = 'block';
-
-    alert("❌ Location ถูก Block\nกรุณาเปิดในการตั้งค่า Browser");
-
-  } else {
-    /* ครั้งแรก */
-    loader.style.display = 'none';
-    gpsBtn.style.display = 'block';
-  }
-
-});
-
-/* =========================
-   👆 CLICK
-========================= */
-gpsBtn.addEventListener('click', sendGPS);
-
-/* =========================
-   🔒 กันย้อนกลับ
-========================= */
-history.pushState(null, null, location.href);
-window.addEventListener('popstate', function () {
-  if (!confirm('ต้องการออกจากหน้านี้หรือไม่ ?')) {
-    history.pushState(null, null, location.href);
-  }
+window.addEventListener('popstate',()=>{
+  history.pushState(null,null,location.href);
 });
 
 /* =========================
    🔒 กัน reload
 ========================= */
-window.addEventListener('beforeunload', function (e) {
+window.addEventListener('beforeunload',(e)=>{
   e.preventDefault();
-  e.returnValue = '';
+  e.returnValue='';
+});
+
+/* =========================
+   📱 Fix iOS viewport jump
+========================= */
+window.addEventListener('resize',()=>{
+  document.body.style.height = window.innerHeight + 'px';
 });
 </script>
 
